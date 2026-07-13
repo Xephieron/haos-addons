@@ -24,6 +24,7 @@ Die KI-Funktionen nutzen [Ollama](https://ollama.com). Trage im Tab
 | `ollama_url` | Adresse deiner Ollama-Instanz | `http://homeassistant.local:11434` |
 | `ollama_model` | Text-Modell (für „Aus Text") | `llama3.2` |
 | `ollama_vision_model` | Vision-Modell (für „Aus Foto") | `llava` |
+| `todo_entity` | Ziel-Liste für „Zur Einkaufsliste" | `todo.shopping_list` |
 
 Hinweise:
 - Läuft Ollama als eigenes Add-on/Container auf demselben Host, ist die URL
@@ -51,6 +52,27 @@ nur einen Vorschlag, gespeichert wird erst, wenn du bestätigst.
 
 Weitere Funktionen: **Suche** (Titel, Kategorie, Zutaten), **Kategorie-Filter**,
 **Bild-Upload** pro Rezept, Zutaten beim Kochen **abhaken**.
+
+### Einkaufsliste
+
+In der Rezept-Detailansicht kannst du eine **einzelne Zutat** über den „＋"-Knopf
+oder **alle Zutaten** über „🛒 Alle zur Einkaufsliste" mit einem Klick auf deine
+Home-Assistant-Einkaufsliste setzen. Voraussetzung:
+
+- Die **Einkaufsliste**- bzw. eine **To-do-Listen**-Integration ist in Home
+  Assistant eingerichtet (die Standard-Entität heißt `todo.shopping_list`).
+- Über die Option `todo_entity` lässt sich auch eine andere Liste ansteuern,
+  z.B. eine Bring!- oder Google-Keep-Liste, sofern sie als To-do-Entität in HA
+  vorhanden ist.
+
+Das Add-on greift dafür über die Home-Assistant-Core-API (`homeassistant_api`)
+auf den Dienst `todo.add_item` zu – eine eigene Integration ist nicht nötig.
+
+### Video
+
+Zu jedem Rezept kannst du ein Video hinterlegen – entweder als **YouTube-Link**
+(wird direkt eingebettet) oder als **eigenes hochgeladenes Video** (MP4/WebM).
+Ein hochgeladenes Video hat Vorrang vor einem Link.
 
 ## Datenspeicherung
 

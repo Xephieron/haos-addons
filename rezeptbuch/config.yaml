@@ -1,5 +1,5 @@
 name: Rezeptbuch
-version: "1.1.1"
+version: "1.2.0"
 slug: rezeptbuch
 description: Ein schönes Rezeptbuch für Home Assistant – Rezepte per KI (Text/Foto) oder manuell anlegen, mit Bildern.
 url: https://github.com/Xephieron/haos-addons/tree/main/rezeptbuch
@@ -10,6 +10,7 @@ arch:
   - armv7
   - i386
 init: false
+homeassistant_api: true
 ingress: true
 ingress_port: 8099
 panel_icon: mdi:book-open-page-variant
@@ -18,7 +19,9 @@ options:
   ollama_url: "http://homeassistant.local:11434"
   ollama_model: "llama3.2"
   ollama_vision_model: "llava"
+  todo_entity: "todo.shopping_list"
 schema:
   ollama_url: str
   ollama_model: str
   ollama_vision_model: str
+  todo_entity: str

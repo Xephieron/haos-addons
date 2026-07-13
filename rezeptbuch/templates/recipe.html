@@ -4,7 +4,9 @@
 {% block content %}
 <a class="back-link" href="{{ url_for('index') }}">← Zurück zur Übersicht</a>
 
-<article class="recipe">
+<article class="recipe"
+         data-shop-add="{{ url_for('shopping_add') }}"
+         data-shop-all="{{ url_for('shopping_add_all', recipe_id=recipe.id) }}">
   {% if recipe.image %}
   <img class="recipe-hero" src="{{ url_for('serve_image', filename=recipe.image) }}" alt="{{ recipe.title }}">
   {% endif %}
@@ -23,6 +25,9 @@
 
   <div class="recipe-actions">
     <a class="btn" href="{{ url_for('edit_recipe', recipe_id=recipe.id) }}">✏️ Bearbeiten</a>
+    {% if recipe.ingredients %}
+    <button class="btn btn-primary" type="button" onclick="addAllToShopping(this)">🛒 Alle zur Einkaufsliste</button>
+    {% endif %}
     <form method="post" action="{{ url_for('delete_recipe', recipe_id=recipe.id) }}"
           onsubmit="return confirm('Dieses Rezept wirklich löschen?');">
       <button class="btn btn-danger" type="submit">🗑️ Löschen</button>
@@ -35,7 +40,12 @@
       {% if recipe.ingredients %}
       <ul class="ingredient-list">
         {% for ing in recipe.ingredients %}
-        <li><label><input type="checkbox"> <span>{{ ing }}</span></label></li>
+        <li>
+          <label><input type="checkbox"> <span>{{ ing }}</span></label>
+          <button class="add-shop" type="button" title="Zur Einkaufsliste"
+                  aria-label="Zur Einkaufsliste hinzufügen"
+                  data-item="{{ ing }}" onclick="addOneToShopping(this)">＋</button>
+        </li>
         {% endfor %}
       </ul>
       {% else %}
@@ -57,6 +67,25 @@
     </section>
   </div>
 
+  {% if recipe.video or recipe.video_url %}
+  <section class="recipe-video-section">
+    <h2>Video</h2>
+    {% if recipe.video %}
+    <video class="recipe-video" controls src="{{ url_for('serve_video', filename=recipe.video) }}"></video>
+    {% elif youtube_id(recipe.video_url) %}
+    <div class="video-embed">
+      <iframe src="https://www.youtube-nocookie.com/embed/{{ youtube_id(recipe.video_url) }}"
+              title="Rezept-Video" frameborder="0" allowfullscreen
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
+    </div>
+    {% elif is_video_file_url(recipe.video_url) %}
+    <video class="recipe-video" controls src="{{ recipe.video_url }}"></video>
+    {% else %}
+    <a class="btn" href="{{ recipe.video_url }}" target="_blank" rel="noopener">▶️ Video ansehen</a>
+    {% endif %}
+  </section>
+  {% endif %}
+
   {% if recipe.notes %}
   <section class="recipe-notes">
     <h2>Notizen</h2>
@@ -64,4 +93,62 @@
   </section>
   {% endif %}
 </article>
+
+<div id="toast" class="toast" hidden></div>
+
+<script>
+  const recipeEl = document.querySelector('.recipe');
+  const addUrl = recipeEl.dataset.shopAdd;
+  const addAllUrl = recipeEl.dataset.shopAll;
+
+  function showToast(message, ok) {
+    const t = document.getElementById('toast');
+    t.textContent = message;
+    t.className = 'toast ' + (ok ? 'toast-ok' : 'toast-err');
+    t.hidden = false;
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => { t.hidden = true; }, 3500);
+  }
+
+  function post(url, body) {
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body,
+    }).then(r => r.json());
+  }
+
+  function addOneToShopping(btn) {
+    const item = btn.dataset.item;
+    btn.disabled = true;
+    post(addUrl, 'item=' + encodeURIComponent(item))
+      .then(data => {
+        if (data.ok) {
+          btn.textContent = '✓';
+          showToast('„' + item + '" zur Einkaufsliste hinzugefügt', true);
+        } else {
+          btn.disabled = false;
+          showToast('Fehler: ' + (data.error || 'unbekannt'), false);
+        }
+      })
+      .catch(() => { btn.disabled = false; showToast('Netzwerkfehler', false); });
+  }
+
+  function addAllToShopping(btn) {
+    btn.disabled = true;
+    const original = btn.textContent;
+    btn.textContent = '⏳ Wird hinzugefügt…';
+    post(addAllUrl, '')
+      .then(data => {
+        btn.textContent = original;
+        if (data.ok) {
+          showToast(data.added + ' von ' + data.total + ' Zutaten zur Einkaufsliste hinzugefügt', true);
+        } else {
+          btn.disabled = false;
+          showToast('Fehler: ' + (data.error || 'unbekannt'), false);
+        }
+      })
+      .catch(() => { btn.disabled = false; btn.textContent = original; showToast('Netzwerkfehler', false); });
+  }
+</script>
 {% endblock %}

@@ -36,14 +36,22 @@ DATA_DIR = "/data" if os.path.isdir("/data") else os.path.join(
     os.path.dirname(__file__), "data"
 )
 IMAGES_DIR = os.path.join(DATA_DIR, "images")
+VIDEOS_DIR = os.path.join(DATA_DIR, "videos")
 os.makedirs(IMAGES_DIR, exist_ok=True)
+os.makedirs(VIDEOS_DIR, exist_ok=True)
 RECIPES_FILE = os.path.join(DATA_DIR, "recipes.json")
 OPTIONS_FILE = os.path.join(DATA_DIR, "options.json")
 
 ALLOWED_IMAGE_EXT = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+ALLOWED_VIDEO_EXT = {".mp4", ".webm", ".mov", ".m4v", ".ogg", ".ogv"}
+
+# Zugang zur Home-Assistant-Core-API (für die Einkaufsliste).
+SUPERVISOR_TOKEN = os.environ.get("SUPERVISOR_TOKEN", "")
+CORE_API = "http://supervisor/core/api"
 
 app = Flask(__name__)
-app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16 MB Upload-Limit
+# Große Uploads erlauben (eigene Videos können mehrere MB groß sein).
+app.config["MAX_CONTENT_LENGTH"] = 256 * 1024 * 1024  # 256 MB
 
 
 # ---------------------------------------------------------------------------
@@ -74,6 +82,7 @@ DEFAULT_OPTIONS = {
     "ollama_url": "http://homeassistant.local:11434",
     "ollama_model": "llama3.2",
     "ollama_vision_model": "llava",
+    "todo_entity": "todo.shopping_list",
 }
 
 
@@ -188,6 +197,52 @@ def recipe_from_ai(response_text):
 
 
 # ---------------------------------------------------------------------------
+# Home-Assistant-Einkaufsliste (Core-API)
+# ---------------------------------------------------------------------------
+def ha_add_to_list(item):
+    """Fügt einen Eintrag zur konfigurierten To-do-/Einkaufsliste hinzu."""
+    if not SUPERVISOR_TOKEN:
+        raise RuntimeError("Kein Zugriff auf die Home-Assistant-API (SUPERVISOR_TOKEN fehlt).")
+    entity = load_options().get("todo_entity") or DEFAULT_OPTIONS["todo_entity"]
+    payload = json.dumps({"entity_id": entity, "item": item}).encode("utf-8")
+    req = urllib.request.Request(
+        CORE_API + "/services/todo/add_item",
+        data=payload,
+        headers={
+            "Authorization": "Bearer " + SUPERVISOR_TOKEN,
+            "Content-Type": "application/json",
+        },
+    )
+    with urllib.request.urlopen(req, timeout=15) as resp:
+        return resp.status in (200, 201)
+
+
+# ---------------------------------------------------------------------------
+# Video-Helfer (YouTube-Erkennung)
+# ---------------------------------------------------------------------------
+def youtube_id(url):
+    if not url:
+        return ""
+    match = re.search(
+        r"(?:youtu\.be/|youtube\.com/(?:watch\?v=|embed/|shorts/|v/|live/))([A-Za-z0-9_-]{11})",
+        url,
+    )
+    return match.group(1) if match else ""
+
+
+def is_video_file_url(url):
+    if not url:
+        return False
+    path = url.split("?")[0].lower()
+    return any(path.endswith(ext) for ext in ALLOWED_VIDEO_EXT)
+
+
+# Für die Templates verfügbar machen.
+app.jinja_env.globals["youtube_id"] = youtube_id
+app.jinja_env.globals["is_video_file_url"] = is_video_file_url
+
+
+# ---------------------------------------------------------------------------
 # Datenhaltung
 # ---------------------------------------------------------------------------
 def load_recipes():
@@ -227,25 +282,26 @@ def _recipe_from_form(form):
         "ingredients": _lines_to_list(form.get("ingredients", "")),
         "steps": _lines_to_list(form.get("steps", "")),
         "notes": form.get("notes", "").strip(),
+        "video_url": form.get("video_url", "").strip(),
     }
 
 
 # ---------------------------------------------------------------------------
 # Bild-Handling
 # ---------------------------------------------------------------------------
-def _save_upload(file_storage):
+def _save_upload(file_storage, directory, allowed_ext, fallback_ext):
     ext = os.path.splitext(file_storage.filename)[1].lower()
-    if ext not in ALLOWED_IMAGE_EXT:
-        ext = ".jpg"
+    if ext not in allowed_ext:
+        ext = fallback_ext
     name = uuid.uuid4().hex + ext
-    file_storage.save(os.path.join(IMAGES_DIR, name))
+    file_storage.save(os.path.join(directory, name))
     return name
 
 
-def _delete_image(name):
+def _delete_file(directory, name):
     if not name:
         return
-    path = os.path.join(IMAGES_DIR, os.path.basename(name))
+    path = os.path.join(directory, os.path.basename(name))
     if os.path.exists(path):
         try:
             os.remove(path)
@@ -256,13 +312,25 @@ def _delete_image(name):
 def apply_image_changes(recipe):
     """Wendet Bild-Upload bzw. -Entfernung aus dem aktuellen Request an."""
     if request.form.get("remove_image") == "1" and recipe.get("image"):
-        _delete_image(recipe["image"])
+        _delete_file(IMAGES_DIR, recipe["image"])
         recipe["image"] = ""
     file = request.files.get("image_file")
     if file and file.filename:
         if recipe.get("image"):
-            _delete_image(recipe["image"])
-        recipe["image"] = _save_upload(file)
+            _delete_file(IMAGES_DIR, recipe["image"])
+        recipe["image"] = _save_upload(file, IMAGES_DIR, ALLOWED_IMAGE_EXT, ".jpg")
+
+
+def apply_video_changes(recipe):
+    """Wendet Video-Upload bzw. -Entfernung aus dem aktuellen Request an."""
+    if request.form.get("remove_video") == "1" and recipe.get("video"):
+        _delete_file(VIDEOS_DIR, recipe["video"])
+        recipe["video"] = ""
+    file = request.files.get("video_file")
+    if file and file.filename:
+        if recipe.get("video"):
+            _delete_file(VIDEOS_DIR, recipe["video"])
+        recipe["video"] = _save_upload(file, VIDEOS_DIR, ALLOWED_VIDEO_EXT, ".mp4")
 
 
 # ---------------------------------------------------------------------------
@@ -312,6 +380,46 @@ def serve_image(filename):
     return send_from_directory(IMAGES_DIR, filename)
 
 
+@app.route("/video/<path:filename>")
+def serve_video(filename):
+    return send_from_directory(VIDEOS_DIR, filename)
+
+
+# ---------------------------------------------------------------------------
+# Einkaufsliste
+# ---------------------------------------------------------------------------
+@app.route("/api/shopping/add", methods=["POST"])
+def shopping_add():
+    item = (request.form.get("item") or "").strip()
+    if not item:
+        return jsonify({"ok": False, "error": "Keine Zutat angegeben."}), 400
+    try:
+        ha_add_to_list(item)
+        return jsonify({"ok": True, "item": item})
+    except Exception as exc:  # noqa: BLE001
+        return jsonify({"ok": False, "error": str(exc)}), 502
+
+
+@app.route("/recipe/<recipe_id>/shopping", methods=["POST"])
+def shopping_add_all(recipe_id):
+    recipe = find_recipe(load_recipes(), recipe_id)
+    if not recipe:
+        return jsonify({"ok": False, "error": "Rezept nicht gefunden."}), 404
+    ingredients = recipe.get("ingredients", [])
+    if not ingredients:
+        return jsonify({"ok": False, "error": "Dieses Rezept hat keine Zutaten."}), 400
+    added, errors = 0, []
+    for ing in ingredients:
+        try:
+            ha_add_to_list(ing)
+            added += 1
+        except Exception as exc:  # noqa: BLE001
+            errors.append(str(exc))
+    if added == 0:
+        return jsonify({"ok": False, "error": errors[0] if errors else "Fehler."}), 502
+    return jsonify({"ok": True, "added": added, "total": len(ingredients)})
+
+
 # ---------------------------------------------------------------------------
 # Routen – Anlegen (Hub mit drei Wegen)
 # ---------------------------------------------------------------------------
@@ -334,7 +442,9 @@ def new_recipe():
         recipe["id"] = uuid.uuid4().hex
         recipe["created"] = datetime.now().isoformat(timespec="seconds")
         recipe["image"] = ""
+        recipe["video"] = ""
         apply_image_changes(recipe)
+        apply_video_changes(recipe)
         recipes.append(recipe)
         save_recipes(recipes)
         return redirect(url_for("view_recipe", recipe_id=recipe["id"]))
@@ -409,6 +519,7 @@ def edit_recipe(recipe_id):
     if request.method == "POST":
         recipe.update(_recipe_from_form(request.form))
         apply_image_changes(recipe)
+        apply_video_changes(recipe)
         save_recipes(recipes)
         return redirect(url_for("view_recipe", recipe_id=recipe_id))
     return render_template(
@@ -420,8 +531,9 @@ def edit_recipe(recipe_id):
 def delete_recipe(recipe_id):
     recipes = load_recipes()
     recipe = find_recipe(recipes, recipe_id)
-    if recipe and recipe.get("image"):
-        _delete_image(recipe["image"])
+    if recipe:
+        _delete_file(IMAGES_DIR, recipe.get("image"))
+        _delete_file(VIDEOS_DIR, recipe.get("video"))
     recipes = [r for r in recipes if r["id"] != recipe_id]
     save_recipes(recipes)
     return redirect(url_for("index"))

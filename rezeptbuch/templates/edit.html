@@ -41,6 +41,24 @@
     <span class="hint">JPG, PNG oder WebP. {% if recipe and recipe.image %}Ein neues Bild ersetzt das vorhandene.{% endif %}</span>
   </div>
 
+  <div class="field">
+    <label for="video_url">Video</label>
+    <input type="url" id="video_url" name="video_url"
+           value="{{ recipe.video_url if recipe else '' }}"
+           placeholder="YouTube-Link (z.B. https://youtu.be/…) oder Video-URL">
+    <span class="hint">YouTube-Link einfügen – oder unten ein eigenes Video hochladen.</span>
+    {% if recipe and recipe.video %}
+    <div class="image-edit">
+      <video class="video-thumb" src="{{ url_for('serve_video', filename=recipe.video) }}" muted></video>
+      <label class="checkbox">
+        <input type="checkbox" name="remove_video" value="1"> Hochgeladenes Video entfernen
+      </label>
+    </div>
+    {% endif %}
+    <input type="file" name="video_file" accept="video/*">
+    <span class="hint">Eigenes Video (MP4/WebM). Ein hochgeladenes Video hat Vorrang vor dem Link.</span>
+  </div>
+
   <div class="form-row">
     <div class="field field-grow">
       <label for="category">Kategorie</label>

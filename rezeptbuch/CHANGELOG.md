@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.2.0
+
+- 🛒 **Einkaufsliste**: einzelne Zutat per „＋" oder alle Zutaten mit einem Klick
+  auf die Home-Assistant-Einkaufsliste (`todo.add_item`) setzen
+- ⚙️ Neue Option `todo_entity` (Standard `todo.shopping_list`) – auch andere
+  To-do-Listen (z.B. Bring!, Google Keep) möglich
+- 🎬 **Video** pro Rezept: YouTube-Link (eingebettet) oder eigenes Video hochladen
+- 🎨 Header etwas niedriger gemacht
+- ⬆️ Upload-Limit auf 256 MB erhöht (große Handyfotos/Videos funktionieren jetzt)
+
 ## 1.1.1
 
 - 🐞 Fix: Der KI-Lade-Spinner wurde beim Öffnen der „Rezept hinzufügen"-Seite
