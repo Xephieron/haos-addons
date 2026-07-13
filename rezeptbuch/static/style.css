@@ -225,6 +225,9 @@ a { color: inherit; text-decoration: none; }
   display: flex; align-items: center; justify-content: center;
   z-index: 100;
 }
+/* Ohne diese Regel überschreibt display:flex das hidden-Attribut,
+   sodass der Spinner schon beim Laden sichtbar wäre. */
+.loader-overlay[hidden] { display: none; }
 .loader-box {
   background: var(--surface); color: var(--text);
   padding: 28px 34px; border-radius: var(--radius);

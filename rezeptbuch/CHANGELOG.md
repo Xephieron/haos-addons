@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.1
+
+- 🐞 Fix: Der KI-Lade-Spinner wurde beim Öffnen der „Rezept hinzufügen"-Seite
+  dauerhaft angezeigt (CSS überschrieb das `hidden`-Attribut). Er erscheint jetzt
+  nur noch während ein KI-Import wirklich läuft.
+
 ## 1.1.0
 
 - 🤖 KI-Import über Ollama: Rezepte aus **Text** erstellen lassen
