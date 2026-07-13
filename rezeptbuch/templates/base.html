@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Rezeptbuch{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="{{ url_for('index') }}">
+      <span class="brand-icon">📖</span>
+      <span class="brand-text">Rezeptbuch</span>
+    </a>
+    <a class="btn btn-primary" href="{{ url_for('new_recipe') }}">
+      <span>＋</span> Neues Rezept
+    </a>
+  </header>
+
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="footer">
+    <span>Rezeptbuch · Home Assistant Add-on</span>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}{% if recipe %}Rezept bearbeiten{% else %}Neues Rezept{% endif %} · Rezeptbuch{% endblock %}
+
+{% block content %}
+<a class="back-link" href="{{ url_for('index') }}">← Zurück zur Übersicht</a>
+
+<h1 class="page-title">{% if recipe %}Rezept bearbeiten{% else %}Neues Rezept{% endif %}</h1>
+
+<form class="recipe-form" method="post">
+  <div class="form-row">
+    <div class="field field-emoji">
+      <label for="emoji">Emoji</label>
+      <input type="text" id="emoji" name="emoji" maxlength="4"
+             value="{{ recipe.emoji if recipe else '🍽️' }}">
+    </div>
+    <div class="field field-grow">
+      <label for="title">Titel *</label>
+      <input type="text" id="title" name="title" required
+             value="{{ recipe.title if recipe else '' }}"
+             placeholder="z.B. Spaghetti Carbonara">
+    </div>
+  </div>
+
+  <div class="form-row">
+    <div class="field field-grow">
+      <label for="category">Kategorie</label>
+      <input type="text" id="category" name="category"
+             value="{{ recipe.category if recipe else '' }}"
+             placeholder="z.B. Hauptgericht">
+    </div>
+    <div class="field">
+      <label for="time">Zeit</label>
+      <input type="text" id="time" name="time"
+             value="{{ recipe.time if recipe else '' }}"
+             placeholder="z.B. 30 Min.">
+    </div>
+    <div class="field">
+      <label for="servings">Portionen</label>
+      <input type="text" id="servings" name="servings"
+             value="{{ recipe.servings if recipe else '' }}"
+             placeholder="z.B. 4">
+    </div>
+  </div>
+
+  <div class="field">
+    <label for="ingredients">Zutaten <span class="hint">(eine pro Zeile)</span></label>
+    <textarea id="ingredients" name="ingredients" rows="8"
+              placeholder="500 g Spaghetti&#10;200 g Pancetta&#10;4 Eigelb">{% if recipe %}{{ recipe.ingredients | join('\n') }}{% endif %}</textarea>
+  </div>
+
+  <div class="field">
+    <label for="steps">Zubereitung <span class="hint">(ein Schritt pro Zeile)</span></label>
+    <textarea id="steps" name="steps" rows="8"
+              placeholder="Nudeln in Salzwasser kochen.&#10;Pancetta anbraten.">{% if recipe %}{{ recipe.steps | join('\n') }}{% endif %}</textarea>
+  </div>
+
+  <div class="field">
+    <label for="notes">Notizen</label>
+    <textarea id="notes" name="notes" rows="3"
+              placeholder="Tipps, Varianten, Herkunft…">{{ recipe.notes if recipe else '' }}</textarea>
+  </div>
+
+  <div class="form-actions">
+    <button class="btn btn-primary" type="submit">Speichern</button>
+    <a class="btn" href="{% if recipe %}{{ url_for('view_recipe', recipe_id=recipe.id) }}{% else %}{{ url_for('index') }}{% endif %}">Abbrechen</a>
+  </div>
+</form>
+{% endblock %}

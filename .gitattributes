@@ -1,0 +1,8 @@
+# Skripte und Add-on-Dateien müssen im Linux-Container LF-Zeilenenden haben,
+# sonst schlägt z.B. der Shebang in run.sh fehl.
+* text=auto eol=lf
+*.sh text eol=lf
+*.py text eol=lf
+Dockerfile text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf

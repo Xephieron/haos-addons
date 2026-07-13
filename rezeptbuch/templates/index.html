@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Rezeptbuch{% endblock %}
+
+{% block content %}
+<form class="searchbar" method="get" action="{{ url_for('index') }}">
+  <input
+    type="search"
+    name="q"
+    value="{{ query }}"
+    placeholder="Rezept, Zutat oder Kategorie suchen…"
+    autocomplete="off">
+  <button class="btn" type="submit">Suchen</button>
+</form>
+
+{% if categories %}
+<div class="chips">
+  <a class="chip {% if not active_category %}chip-active{% endif %}"
+     href="{{ url_for('index') }}">Alle</a>
+  {% for cat in categories %}
+    <a class="chip {% if cat == active_category %}chip-active{% endif %}"
+       href="{{ url_for('index', category=cat) }}">{{ cat }}</a>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if recipes %}
+<div class="grid">
+  {% for recipe in recipes %}
+  <a class="card" href="{{ url_for('view_recipe', recipe_id=recipe.id) }}">
+    <div class="card-emoji">{{ recipe.emoji }}</div>
+    <div class="card-body">
+      <h2 class="card-title">{{ recipe.title }}</h2>
+      <div class="card-meta">
+        {% if recipe.category %}<span class="tag">{{ recipe.category }}</span>{% endif %}
+        {% if recipe.time %}<span class="meta-item">⏱️ {{ recipe.time }}</span>{% endif %}
+        {% if recipe.servings %}<span class="meta-item">🍴 {{ recipe.servings }}</span>{% endif %}
+      </div>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty">
+  <div class="empty-emoji">🍳</div>
+  {% if query or active_category %}
+    <p>Keine Rezepte gefunden.</p>
+    <a class="btn" href="{{ url_for('index') }}">Filter zurücksetzen</a>
+  {% else %}
+    <p>Noch keine Rezepte vorhanden.</p>
+    <a class="btn btn-primary" href="{{ url_for('new_recipe') }}">Erstes Rezept anlegen</a>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

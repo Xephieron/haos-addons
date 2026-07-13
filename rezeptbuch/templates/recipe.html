@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}{{ recipe.title }} · Rezeptbuch{% endblock %}
+
+{% block content %}
+<a class="back-link" href="{{ url_for('index') }}">← Zurück zur Übersicht</a>
+
+<article class="recipe">
+  <div class="recipe-header">
+    <div class="recipe-emoji">{{ recipe.emoji }}</div>
+    <div>
+      <h1 class="recipe-title">{{ recipe.title }}</h1>
+      <div class="card-meta">
+        {% if recipe.category %}<span class="tag">{{ recipe.category }}</span>{% endif %}
+        {% if recipe.time %}<span class="meta-item">⏱️ {{ recipe.time }}</span>{% endif %}
+        {% if recipe.servings %}<span class="meta-item">🍴 {{ recipe.servings }}</span>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="recipe-actions">
+    <a class="btn" href="{{ url_for('edit_recipe', recipe_id=recipe.id) }}">✏️ Bearbeiten</a>
+    <form method="post" action="{{ url_for('delete_recipe', recipe_id=recipe.id) }}"
+          onsubmit="return confirm('Dieses Rezept wirklich löschen?');">
+      <button class="btn btn-danger" type="submit">🗑️ Löschen</button>
+    </form>
+  </div>
+
+  <div class="recipe-columns">
+    <section class="recipe-ingredients">
+      <h2>Zutaten</h2>
+      {% if recipe.ingredients %}
+      <ul class="ingredient-list">
+        {% for ing in recipe.ingredients %}
+        <li><label><input type="checkbox"> <span>{{ ing }}</span></label></li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="muted">Keine Zutaten angegeben.</p>
+      {% endif %}
+    </section>
+
+    <section class="recipe-steps">
+      <h2>Zubereitung</h2>
+      {% if recipe.steps %}
+      <ol class="step-list">
+        {% for step in recipe.steps %}
+        <li>{{ step }}</li>
+        {% endfor %}
+      </ol>
+      {% else %}
+      <p class="muted">Keine Schritte angegeben.</p>
+      {% endif %}
+    </section>
+  </div>
+
+  {% if recipe.notes %}
+  <section class="recipe-notes">
+    <h2>Notizen</h2>
+    <p>{{ recipe.notes | nl2br | safe }}</p>
+  </section>
+  {% endif %}
+</article>
+{% endblock %}

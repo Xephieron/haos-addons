@@ -1,0 +1,14 @@
+# Lokale Testdaten der Add-ons
+**/data/
+*.tmp
+
+# Python
+__pycache__/
+*.pyc
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Lokale Claude-Code-Einstellungen
+.claude/
