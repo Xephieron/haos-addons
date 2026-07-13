@@ -4,9 +4,15 @@
 {% block content %}
 <a class="back-link" href="{{ url_for('index') }}">← Zurück zur Übersicht</a>
 
+{% if created %}
+<div class="alert alert-info">
+  ✨ Die KI hat dieses Rezept vorausgefüllt. Prüfe alles in Ruhe, passe es an und speichere.
+</div>
+{% endif %}
+
 <h1 class="page-title">{% if recipe %}Rezept bearbeiten{% else %}Neues Rezept{% endif %}</h1>
 
-<form class="recipe-form" method="post">
+<form class="recipe-form" method="post" enctype="multipart/form-data">
   <div class="form-row">
     <div class="field field-emoji">
       <label for="emoji">Emoji</label>
@@ -19,6 +25,20 @@
              value="{{ recipe.title if recipe else '' }}"
              placeholder="z.B. Spaghetti Carbonara">
     </div>
+  </div>
+
+  <div class="field">
+    <label>Bild</label>
+    {% if recipe and recipe.image %}
+    <div class="image-edit">
+      <img class="image-preview" src="{{ url_for('serve_image', filename=recipe.image) }}" alt="Rezeptbild">
+      <label class="checkbox">
+        <input type="checkbox" name="remove_image" value="1"> Bild entfernen
+      </label>
+    </div>
+    {% endif %}
+    <input type="file" name="image_file" accept="image/*">
+    <span class="hint">JPG, PNG oder WebP. {% if recipe and recipe.image %}Ein neues Bild ersetzt das vorhandene.{% endif %}</span>
   </div>
 
   <div class="form-row">

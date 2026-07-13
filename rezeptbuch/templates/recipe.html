@@ -5,6 +5,10 @@
 <a class="back-link" href="{{ url_for('index') }}">← Zurück zur Übersicht</a>
 
 <article class="recipe">
+  {% if recipe.image %}
+  <img class="recipe-hero" src="{{ url_for('serve_image', filename=recipe.image) }}" alt="{{ recipe.title }}">
+  {% endif %}
+
   <div class="recipe-header">
     <div class="recipe-emoji">{{ recipe.emoji }}</div>
     <div>

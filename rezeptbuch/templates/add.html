@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Rezept hinzufügen · Rezeptbuch{% endblock %}
+
+{% block content %}
+<a class="back-link" href="{{ url_for('index') }}">← Zurück zur Übersicht</a>
+<h1 class="page-title">Rezept hinzufügen</h1>
+
+{% if error %}
+<div class="alert alert-error">{{ error }}</div>
+{% endif %}
+
+<div class="ollama-status" id="ollama-status" data-url="{{ url_for('ollama_status') }}">
+  <span class="dot dot-wait"></span>
+  <span class="status-text">Ollama-Verbindung wird geprüft…</span>
+</div>
+
+<div class="add-options">
+  <!-- Manuell -->
+  <section class="add-card">
+    <div class="add-card-icon">✍️</div>
+    <h2>Manuell eingeben</h2>
+    <p>Rezept selbst Feld für Feld ausfüllen – ganz ohne KI.</p>
+    <a class="btn btn-primary" href="{{ url_for('new_recipe') }}">Manuell anlegen</a>
+  </section>
+
+  <!-- KI aus Text -->
+  <section class="add-card">
+    <div class="add-card-icon">🤖</div>
+    <h2>Aus Text (KI)</h2>
+    <p>Rezept-Text einfügen – die KI erkennt Zutaten und Schritte automatisch.</p>
+    <form method="post" action="{{ url_for('add_from_text') }}" class="ai-form"
+          onsubmit="showLoader(this, 'KI liest das Rezept…')">
+      <textarea name="text" rows="6"
+                placeholder="Rezept-Text hier einfügen…">{{ prefill_text }}</textarea>
+      <button class="btn btn-primary" type="submit">Von KI erstellen lassen</button>
+    </form>
+  </section>
+
+  <!-- KI aus Foto -->
+  <section class="add-card">
+    <div class="add-card-icon">📷</div>
+    <h2>Aus Foto (KI)</h2>
+    <p>Foto vom Rezept (z.B. aus einem Kochbuch) hochladen – die KI überträgt es.</p>
+    <form method="post" action="{{ url_for('add_from_photo') }}"
+          enctype="multipart/form-data" class="ai-form"
+          onsubmit="showLoader(this, 'KI analysiert das Foto…')">
+      <input type="file" name="image_file" accept="image/*" required>
+      <button class="btn btn-primary" type="submit">Foto auswerten lassen</button>
+    </form>
+  </section>
+</div>
+
+<div class="loader-overlay" id="loader" hidden>
+  <div class="loader-box">
+    <div class="spinner"></div>
+    <p id="loader-text">KI arbeitet…</p>
+    <small>Das kann je nach Modell und Hardware etwas dauern.</small>
+  </div>
+</div>
+
+<script>
+  function showLoader(form, text) {
+    document.getElementById('loader-text').textContent = text;
+    document.getElementById('loader').hidden = false;
+  }
+
+  (function checkOllama() {
+    const el = document.getElementById('ollama-status');
+    fetch(el.dataset.url)
+      .then(r => r.json())
+      .then(data => {
+        const dot = el.querySelector('.dot');
+        const txt = el.querySelector('.status-text');
+        if (data.ok) {
+          dot.className = 'dot dot-ok';
+          const has = (data.models || []).length;
+          txt.textContent = 'Ollama verbunden (' + data.url + ') · '
+            + has + ' Modell(e) · Text: ' + (data.model || '?')
+            + ', Vision: ' + (data.vision_model || '?');
+        } else {
+          dot.className = 'dot dot-err';
+          txt.textContent = 'Ollama nicht erreichbar (' + (data.url || '') + '). '
+            + 'KI-Funktionen sind erst aktiv, wenn die URL in den Add-on-Optionen stimmt.';
+        }
+      })
+      .catch(() => {
+        el.querySelector('.dot').className = 'dot dot-err';
+        el.querySelector('.status-text').textContent = 'Status konnte nicht geladen werden.';
+      });
+  })();
+</script>
+{% endblock %}
