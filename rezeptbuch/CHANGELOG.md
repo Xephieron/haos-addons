@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.1
+
+- 🔎 Einkaufsliste: prüft jetzt, ob die konfigurierte Liste (`todo_entity`)
+  überhaupt existiert, und nennt bei Fehler die **verfügbaren** To-do-Listen
+  (vorher meldete Home Assistant fälschlich Erfolg, obwohl nichts eingetragen wurde)
+- 💬 Die Erfolgsmeldung zeigt jetzt an, **in welche Liste** eingetragen wurde
+- 📝 Eintragungen werden zusätzlich im Add-on-Log protokolliert
+
 ## 1.2.0
 
 - 🛒 **Einkaufsliste**: einzelne Zutat per „＋" oder alle Zutaten mit einem Klick

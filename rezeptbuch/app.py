@@ -199,22 +199,61 @@ def recipe_from_ai(response_text):
 # ---------------------------------------------------------------------------
 # Home-Assistant-Einkaufsliste (Core-API)
 # ---------------------------------------------------------------------------
-def ha_add_to_list(item):
-    """Fügt einen Eintrag zur konfigurierten To-do-/Einkaufsliste hinzu."""
+def _ha_request(path, method="GET", body=None):
     if not SUPERVISOR_TOKEN:
         raise RuntimeError("Kein Zugriff auf die Home-Assistant-API (SUPERVISOR_TOKEN fehlt).")
-    entity = load_options().get("todo_entity") or DEFAULT_OPTIONS["todo_entity"]
-    payload = json.dumps({"entity_id": entity, "item": item}).encode("utf-8")
+    data = json.dumps(body).encode("utf-8") if body is not None else None
     req = urllib.request.Request(
-        CORE_API + "/services/todo/add_item",
-        data=payload,
+        CORE_API + path,
+        data=data,
+        method=method,
         headers={
             "Authorization": "Bearer " + SUPERVISOR_TOKEN,
             "Content-Type": "application/json",
         },
     )
     with urllib.request.urlopen(req, timeout=15) as resp:
-        return resp.status in (200, 201)
+        raw = resp.read().decode("utf-8")
+        return resp.status, (json.loads(raw) if raw else None)
+
+
+def ha_todo_entities():
+    """Liste aller verfügbaren To-do-/Einkaufslisten-Entitäten."""
+    _, states = _ha_request("/states")
+    return sorted(
+        s["entity_id"]
+        for s in (states or [])
+        if str(s.get("entity_id", "")).startswith("todo.")
+    )
+
+
+def ha_validate_list():
+    """Prüft, ob die konfigurierte Liste existiert; sonst hilfreicher Fehler."""
+    entity = load_options().get("todo_entity") or DEFAULT_OPTIONS["todo_entity"]
+    try:
+        status, _ = _ha_request("/states/" + entity)
+        if status == 200:
+            return entity
+    except urllib.error.HTTPError as exc:
+        if exc.code != 404:
+            raise
+    available = ", ".join(ha_todo_entities()) or "keine gefunden"
+    raise ValueError(
+        f"Die Liste '{entity}' existiert in Home Assistant nicht. "
+        f"Verfügbare To-do-/Einkaufslisten: {available}. "
+        f"Trage die richtige unter 'todo_entity' in den Add-on-Optionen ein."
+    )
+
+
+def ha_add_item(entity, item):
+    """Fügt einen Eintrag zur angegebenen Liste hinzu."""
+    _ha_request(
+        "/services/todo/add_item",
+        method="POST",
+        body={"entity_id": entity, "item": item},
+    )
+    print(f"[Rezeptbuch] Zur Einkaufsliste ({entity}): {item}", flush=True)
+    return True
 
 
 # ---------------------------------------------------------------------------
@@ -394,8 +433,9 @@ def shopping_add():
     if not item:
         return jsonify({"ok": False, "error": "Keine Zutat angegeben."}), 400
     try:
-        ha_add_to_list(item)
-        return jsonify({"ok": True, "item": item})
+        entity = ha_validate_list()
+        ha_add_item(entity, item)
+        return jsonify({"ok": True, "item": item, "entity": entity})
     except Exception as exc:  # noqa: BLE001
         return jsonify({"ok": False, "error": str(exc)}), 502
 
@@ -408,16 +448,20 @@ def shopping_add_all(recipe_id):
     ingredients = recipe.get("ingredients", [])
     if not ingredients:
         return jsonify({"ok": False, "error": "Dieses Rezept hat keine Zutaten."}), 400
+    try:
+        entity = ha_validate_list()
+    except Exception as exc:  # noqa: BLE001
+        return jsonify({"ok": False, "error": str(exc)}), 502
     added, errors = 0, []
     for ing in ingredients:
         try:
-            ha_add_to_list(ing)
+            ha_add_item(entity, ing)
             added += 1
         except Exception as exc:  # noqa: BLE001
             errors.append(str(exc))
     if added == 0:
         return jsonify({"ok": False, "error": errors[0] if errors else "Fehler."}), 502
-    return jsonify({"ok": True, "added": added, "total": len(ingredients)})
+    return jsonify({"ok": True, "added": added, "total": len(ingredients), "entity": entity})
 
 
 # ---------------------------------------------------------------------------

@@ -1,5 +1,5 @@
 name: Rezeptbuch
-version: "1.2.0"
+version: "1.2.1"
 slug: rezeptbuch
 description: Ein schönes Rezeptbuch für Home Assistant – Rezepte per KI (Text/Foto) oder manuell anlegen, mit Bildern.
 url: https://github.com/Xephieron/haos-addons/tree/main/rezeptbuch
